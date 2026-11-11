@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="ar" dir="rtl"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>فحص موقع ونار</title>
+<style>body{font-family:system-ui,sans-serif;max-width:560px;margin:24px auto;padding:0 16px}li{margin:8px 0;padding:10px;border-radius:10px;background:#f1f5f5;list-style:none}.ok{border-right:5px solid #17794a}.bad{border-right:5px solid #b3382c;background:#fdeceb}small{display:block;color:#555;direction:ltr;text-align:left;word-break:break-all}</style></head>
+<body><h2>فحص موقع ونار</h2><ul id="out"></ul>
+<script>
+const out=document.getElementById('out');
+const add=(ok,t,d)=>{const li=document.createElement('li');li.className=ok?'ok':'bad';li.innerHTML=(ok?'✅ ':'❌ ')+t+(d?'<small>'+String(d).replace(/</g,'&lt;')+'</small>':'');out.appendChild(li)};
+async function file(name,check){try{const r=await fetch(name,{cache:'no-store'});if(!r.ok)return add(false,name+' غير موجود (HTTP '+r.status+') — الملف/المجلد لم يُرفع',name);const t=await r.text();if(/^\s*<!doctype html/i.test(t)&&name!=='index.html')return add(false,name+' غير موجود (رجعت صفحة HTML بدل الملف)',name);const m=check?check(t):null;add(!m,name+(m?' — '+m:' ✓ ('+Math.round(t.length/1024)+' KB)'))}catch(e){add(false,name,e.message)}}
+(async()=>{
+await file('config.js',t=>{const ks=['apiKey','authDomain','projectId','appId'];const miss=ks.filter(k=>!new RegExp(k+'\\s*:\\s*"[^"]+"').test(t));return miss.length?'قيم ناقصة: '+miss.join('، '):null});
+await file('assets/app.js',t=>t.length<50000?'الملف صغير جداً/تالف':null);
+await file('assets/app.css');
+await file('manifest.webmanifest');
+await file('icons/icon-192.png');
+for(const u of ['https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js','https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js','https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js','https://cdn.jsdelivr.net/npm/gsap@3.12.5/+esm','https://cdn.jsdelivr.net/npm/lenis@1.1.13/+esm']){
+ try{await import(u);add(true,'مكتبة '+u.split('/').slice(-2).join('/')+' ✓')}catch(e){add(false,'تعذّر تحميل المكتبة (حجب إنترنت/إضافة حماية؟)',u+' — '+e.message)}}
+add(location.protocol==='https:','الاتصال '+location.protocol);
+})();
+</script></body></html>

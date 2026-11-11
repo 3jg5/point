@@ -18,7 +18,19 @@
     <title>ونار | نقاط المشرفين</title>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root"><p id="boot" style="font-family:sans-serif;text-align:center;margin-top:30vh;color:#0e6b72">جاري التحميل...</p></div>
+    <script>
+      // إذا تعثّر التحميل تظهر رسالة بدل الصفحة الفارغة
+      (function () {
+        function show(msg) {
+          var b = document.getElementById('boot');
+          if (b) b.innerHTML = 'تعذّر تشغيل الموقع<br><small dir="ltr" style="color:#b3382c">' + String(msg).replace(/</g, '&lt;') + '</small><br><a href="diagnose.html">افتح صفحة الفحص diagnose.html</a>';
+        }
+        window.addEventListener('error', function (e) { show(e.message || (e.target && (e.target.src || e.target.href)) || 'error'); }, true);
+        window.addEventListener('unhandledrejection', function (e) { show(e.reason && e.reason.message || e.reason); });
+        setTimeout(function () { if (document.getElementById('boot')) show('لم يبدأ التطبيق خلال 8 ثوانٍ'); }, 8000);
+      })();
+    </script>
     <script src="config.js"></script>
     <script type="module" src="assets/app.js"></script>
   </body>
