@@ -1,0 +1,58 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // مستخدم مسجّل وله ملف في users (أي أنه مشرف أو مدير فعلاً)
+    function member() {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+    function prof() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+    function isManager() {
+      return member() && prof().role == 'manager' && prof().active == true;
+    }
+
+    match /users/{uid} {
+      allow read: if member() || (request.auth != null && request.auth.uid == uid);
+      // إنشاء أول مدير مرة واحدة فقط (قبل وجود settings/bootstrap)، وبعدها المدير فقط
+      allow create: if isManager()
+        || (request.auth != null && request.auth.uid == uid
+            && request.resource.data.role == 'manager'
+            && !exists(/databases/$(database)/documents/settings/bootstrap));
+      allow update, delete: if isManager();
+    }
+
+    match /settings/bootstrap {
+      allow read: if true;
+      allow create: if request.auth != null
+        && !exists(/databases/$(database)/documents/settings/bootstrap);
+    }
+
+    match /settings/{id} {
+      allow read: if member();
+      allow write: if isManager();
+    }
+
+    // سجلات النقاط (بدون الصور)
+    match /submissions/{id} {
+      allow read: if member();
+      allow create: if member()
+        && prof().active == true
+        && request.resource.data.uid == request.auth.uid
+        && (request.resource.data.role == prof().role
+            || ('roles' in prof() && request.resource.data.role in prof().roles));
+      allow update: if false;
+      allow delete: if isManager();
+    }
+
+    // صور الإثبات: يراها صاحبها والمدير فقط
+    match /proofs/{id} {
+      allow read: if member() && (resource.data.uid == request.auth.uid || isManager());
+      allow create: if member() && request.resource.data.uid == request.auth.uid;
+      allow update: if false;
+      allow delete: if isManager();
+    }
+  }
+}
